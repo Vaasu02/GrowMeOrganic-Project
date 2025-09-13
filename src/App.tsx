@@ -24,28 +24,24 @@ const App = () => {
   const [selectedRows, setSelectedRows] = useState<Record<number, boolean>>({});
   const [rowsToSelect, setRowsToSelect] = useState<number>(0);
   
-  // Instead of storing full artwork objects, we only need IDs for selection persistence
+  // Store just the IDs to track selections across pages
   const [selectedArtworkIds, setSelectedArtworkIds] = useState<number[]>([]);
   
   const op = useRef<OverlayPanel>(null);
   const toast = useRef<Toast>(null);
-  // Fetch artwork data from API
+  // Get artwork data from API for each page
   const fetchArtworks = async (page: number) => {
-    console.log('🚀 Fetching artworks for page:', page);
     setLoading(true);
     try {
       const response = await fetch(`https://api.artic.edu/api/v1/artworks?page=${page}`);
       const data: ApiResponse = await response.json();
       
-      console.log('📦 Fetched data:', data.data.length, 'artworks');
-      
-      // Update the artworks for the current page only
+      // Just show current page data
       setArtworks(data.data);
       
       setTotalRecords(data.pagination.total);
       setCurrentPage(data.pagination.current_page);
-    } catch (error) {
-      console.error('Error fetching artworks:', error);
+    } catch {
       toast.current?.show({ 
         severity: 'error', 
         summary: 'Error', 
@@ -57,71 +53,53 @@ const App = () => {
     }
   };
 
-  // Initialize data on component mount
+  // Load first page when app starts
   useEffect(() => {
     fetchArtworks(1);
   }, []);
 
-  // Handle page change
+  // When user changes page
   const onPageChange = (event: { page: number, rows: number }) => {
     const page = event.page + 1; // PrimeReact paginator is 0-based, API is 1-based
-    console.log('📄 Page change requested to page:', page);
-    console.log('🔍 Current selectedRows state:', selectedRows);
-    console.log('📊 Total selected count:', Object.values(selectedRows).filter(Boolean).length);
     fetchArtworks(page);
   };
   
-  // Update the DataTable selection when artworks change
+  // Show selected rows when page changes
   useEffect(() => {
     if (artworks.length > 0) {
-      console.log('🔄 Artworks updated, applying selection state...');
-      console.log('📋 Current page artworks:', artworks.length, 'items');
-      console.log('🎯 Current page:', currentPage);
-      
-      // Filter to only include current page items that are selected
-      const currentPageSelectedArtworks = artworks.filter(artwork => {
-        const isSelected = selectedRows[artwork.id] === true;
-        console.log(`🎨 Artwork ${artwork.id} (${artwork.title}): ${isSelected ? 'SELECTED' : 'not selected'}`);
-        return isSelected;
-      });
-      
-      console.log('✅ Selected artworks on current page:', currentPageSelectedArtworks.length);
-      console.log('🆔 Selected IDs:', currentPageSelectedArtworks.map(a => a.id));
+      // Find which rows should be checked
+      const currentPageSelectedArtworks = artworks.filter(artwork => 
+        selectedRows[artwork.id] === true
+      );
       
       setSelectedArtworks(currentPageSelectedArtworks);
     }
   }, [artworks, selectedRows, currentPage, selectedArtworkIds]);
 
-  // Handle row selection
+  // When user checks or unchecks rows
   const onSelectionChange = (e: { value: Artwork[] }) => {
     const selectedItems = e.value;
-    console.log('👆 Manual selection change:', selectedItems.length, 'items selected');
-    console.log('🆔 Manually selected IDs:', selectedItems.map(item => item.id));
-    
     setSelectedArtworks(selectedItems);
     
-    // Update selected rows map
+    // Keep track of selections
     const newSelectedRows = { ...selectedRows };
     
-    // Mark current page items as selected or not
+    // Update selection state for each row
     artworks.forEach(artwork => {
       const isSelected = selectedItems.some(item => item.id === artwork.id);
       newSelectedRows[artwork.id] = isSelected;
-      console.log(`🔄 Updated selection for artwork ${artwork.id}: ${isSelected}`);
     });
     
-    // Update the array of selected artwork IDs
+    // Get all selected IDs
     const newSelectedIds = Object.entries(newSelectedRows)
       .filter(([, isSelected]) => isSelected)
       .map(([id]) => parseInt(id));
     setSelectedArtworkIds(newSelectedIds);
     
     setSelectedRows(newSelectedRows);
-    console.log('💾 Updated selectedRows state:', newSelectedRows);
-    console.log('🔢 Total selected IDs:', newSelectedIds.length);
   };
 
-  // Select specific number of rows across pages
+  // When user enters a number in the overlay
   const selectRows = async () => {
     if (rowsToSelect <= 0) {
       toast.current?.show({ 
@@ -133,62 +111,47 @@ const App = () => {
       return;
     }
 
-    console.log('🎯 Starting selection process for', rowsToSelect, 'rows');
-    console.log('📍 Current page:', currentPage);
-    console.log('📋 Current page artworks:', artworks.length);
-
-    // Clear previous selections
+    // Start fresh
     const newSelectedRows: Record<number, boolean> = {};
     const newSelectedIds: number[] = [];
     
-    // Handle current page selection first
+    // Select rows on current page first
     const currentPageCount = Math.min(rowsToSelect, artworks.length);
-    console.log('✅ Selecting', currentPageCount, 'rows from current page');
     
-    // Mark current page items as selected
+    // Check the rows
     artworks.forEach((artwork, index) => {
       if (index < currentPageCount) {
         newSelectedRows[artwork.id] = true;
         newSelectedIds.push(artwork.id);
-        console.log(`🎨 Selected artwork ${artwork.id} (${artwork.title}) from current page`);
       }
     });
 
-    // If we need more rows than available on current page, fetch and select from next pages
+    // If we need more rows, get them from next pages
     let remainingToSelect = rowsToSelect - currentPageCount;
     let nextPage = currentPage + 1;
-    
-    console.log('🔄 Need to select', remainingToSelect, 'more rows from subsequent pages');
 
     while (remainingToSelect > 0) {
       try {
-        console.log('🚀 Fetching page', nextPage, 'for additional selections');
         setLoading(true);
         const response = await fetch(`https://api.artic.edu/api/v1/artworks?page=${nextPage}`);
         const data: ApiResponse = await response.json();
         
         if (!data.data || data.data.length === 0) {
-          console.log('❌ No more data available on page', nextPage);
-          break;
+          break; // No more data available
         }
         
         const nextPageArtworks = data.data;
-        console.log('📦 Fetched', nextPageArtworks.length, 'artworks from page', nextPage);
-        
         const nextPageSelectCount = Math.min(remainingToSelect, nextPageArtworks.length);
-        console.log('✅ Selecting', nextPageSelectCount, 'rows from page', nextPage);
         
-        // Update selected rows map for this page
+        // Select these rows too
         nextPageArtworks.slice(0, nextPageSelectCount).forEach(artwork => {
           newSelectedRows[artwork.id] = true;
           newSelectedIds.push(artwork.id);
-          console.log(`🎨 Selected artwork ${artwork.id} (${artwork.title}) from page ${nextPage}`);
         });
         
         remainingToSelect -= nextPageSelectCount;
         nextPage++;
-      } catch (error) {
-        console.error('❌ Error fetching additional artworks for selection:', error);
+      } catch {
         toast.current?.show({ 
           severity: 'error', 
           summary: 'Error', 
@@ -201,20 +164,17 @@ const App = () => {
       }
     }
     
-    // Update selected rows map and IDs
+    // Save all selections
     setSelectedRows(newSelectedRows);
     setSelectedArtworkIds(newSelectedIds);
-    console.log('🎯 Final selection state:', newSelectedRows);
-    console.log('📊 Total selected rows:', newSelectedIds.length);
     
-    // Update selected artworks for current page
+    // Update what's shown on screen
     const currentPageSelectedArtworks = artworks.filter(artwork => 
       newSelectedRows[artwork.id] === true
     );
     setSelectedArtworks(currentPageSelectedArtworks);
-    console.log('✅ Current page selected artworks updated:', currentPageSelectedArtworks.length);
     
-    // Show success message
+    // Tell user it worked
     toast.current?.show({ 
       severity: 'success', 
       summary: 'Success', 
@@ -225,7 +185,7 @@ const App = () => {
     op.current?.hide();
   };
 
-  // Check if a row is selected based on our tracking
+  // Helper to check if a row is selected
   const isRowSelected = (artwork: Artwork) => {
     return !!selectedRows[artwork.id];
   };
