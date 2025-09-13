@@ -1,0 +1,99 @@
+:root {
+  font-family: Inter, system-ui, Avenir, Helvetica, Arial, sans-serif;
+  line-height: 1.5;
+  font-weight: 400;
+
+  color-scheme: light dark;
+  color: rgba(255, 255, 255, 0.87);
+  background-color: #242424;
+
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+  -webkit-font-smoothing: antialiased;
+  -moz-osx-font-smoothing: grayscale;
+}
+
+body {
+  margin: 0;
+  min-width: 320px;
+  min-height: 100vh;
+}
+
+@media (prefers-color-scheme: light) {
+  :root {
+    color: #213547;
+    background-color: #ffffff;
+  }
+}
+
+/* Custom styles for the app */
+.card {
+  background: #ffffff;
+  padding: 2rem;
+  border-radius: 10px;
+  margin: 1rem;
+  box-shadow: 0 2px 1px -1px rgba(0,0,0,0.2), 0 1px 1px 0 rgba(0,0,0,0.14), 0 1px 3px 0 rgba(0,0,0,0.12);
+}
+
+.p-datatable .p-datatable-tbody > tr.bg-blue-50 {
+  background-color: #f0f7ff !important;
+}
+
+/* Title header container styling */
+.title-header-container {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  position: relative;
+}
+
+/* Cursor pointer for the chevron icon */
+.pi-chevron-down {
+  cursor: pointer;
+  font-size: 0.8rem;
+}
+
+/* Selection overlay styling */
+.selection-overlay .p-overlaypanel-content {
+  padding: 0;
+  border-radius: 8px;
+}
+
+.selection-overlay h3 {
+  margin-top: 0;
+  margin-bottom: 0.5rem;
+}
+
+/* Input and button styling for overlay */
+.selection-input-container {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.selection-input {
+  width: 100%;
+  padding: 8px;
+  border-radius: 4px;
+}
+
+.submit-button-container {
+  display: flex;
+  justify-content: flex-end;
+}
+
+.submit-button {
+  background-color: #6366F1;
+  color: white;
+  border: none;
+  border-radius: 4px;
+  padding: 8px 16px;
+}
+
+/* Responsive adjustments */
+@media screen and (max-width: 768px) {
+  .card {
+    padding: 1rem;
+    margin: 0.5rem;
+  }
+}
